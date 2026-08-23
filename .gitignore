@@ -1,0 +1,41 @@
+# ---- Secrets: never commit these ----
+*.jks
+*.keystore
+local.properties
+google-services.json
+keystore.properties
+.env
+*.p12
+service-account*.json
+client_secret*.json
+
+# ---- Gradle ----
+.gradle/
+build/
+captures/
+.cxx/
+
+# ---- Android ----
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+bin/
+gen/
+out/
+release/
+lint/
+*.log
+
+# ---- IDE ----
+.idea/
+*.iml
+*.ipr
+*.iws
+.navigation/
+.externalNativeBuild/
+
+# ---- OS ----
+.DS_Store
+Thumbs.db
