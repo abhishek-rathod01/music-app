@@ -1,9 +1,11 @@
-// See gradle.properties for why this uses the traditional
-// org.jetbrains.kotlin.android plugin rather than AGP 9's new built-in
-// Kotlin support.
+// AGP 9's default Kotlin support is "built-in": com.android.application
+// compiles Kotlin itself, so we don't apply a separate
+// org.jetbrains.kotlin.android plugin (see gradle.properties for why —
+// the traditional plugin was tried first and fails to compile on this
+// AGP version). The Compose compiler is still its own plugin regardless —
+// it hooks into the compiler, not into how Kotlin/Android is wired.
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.compose.compiler)
 }
 
@@ -55,13 +57,6 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
-    }
-
-    kotlinOptions {
-        // Must match compileOptions above — Kotlin and Java bytecode
-        // targets are independent settings and Gradle won't catch a
-        // mismatch between them for you.
-        jvmTarget = "17"
     }
 
     buildFeatures {
