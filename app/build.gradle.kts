@@ -11,12 +11,18 @@ plugins {
 
 android {
     namespace = "com.abhishekrathod.musicapp"
-    compileSdk = 36
+    // CI's own dependency check demanded this: the Compose BOM we're on
+    // (2026.08.00, Compose 1.12) ships artifacts compiled against API 37,
+    // and AGP 9 refuses to let a consumer compile against an older SDK
+    // than its dependencies did. Originally set to 36 (Android 16, the
+    // stable release at the time) from a web search that couldn't have
+    // known that; CI's error named the exact fix.
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.abhishekrathod.musicapp"
         minSdk = 26
-        targetSdk = 36
+        targetSdk = 37
 
         // GITHUB_RUN_NUMBER only exists in CI. Locally (or if anyone ever
         // runs Gradle outside CI) this falls back to a fixed dev value so
