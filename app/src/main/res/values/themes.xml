@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Platform-only theme (no AndroidX Material Components dependency).
+      The real UI theming happens in Kotlin via Compose's MaterialTheme;
+      this just sets the window background before Compose takes over.
+    -->
+    <style name="Theme.MusicApp" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>

@@ -9,6 +9,17 @@ until the user has confirmed the current one works on their phone.**
 
 ## Stage 1 — Project skeleton, Gradle config, and a release pipeline
 
+### Status (2026-08-23)
+
+**In progress — PR opened, awaiting CI and your on-device check.** All Stage 1 files are
+written: Gradle wrapper (pinned to Gradle 9.7.1), root + module build files, the version
+catalog, the one-screen app, and `.github/workflows/release.yml`. Versions were confirmed
+by web search, not memory — see the PR description for the exact numbers and confidence
+per dependency. This has never been compiled anywhere (see
+[`ENVIRONMENT.md`](ENVIRONMENT.md)): the first CI run on the PR is the first real signal.
+Do not start Stage 2 until the release APK installs and opens on your phone — see "How you
+verify this stage" below.
+
 ### Goal
 
 An Android project that contains no app logic yet, but that CI can compile, package,
