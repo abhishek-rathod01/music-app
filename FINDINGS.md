@@ -159,7 +159,7 @@ three cases the brief calls out by name:
 - Connecting and calling `prepare()`/`play()` against an empty queue — must be a safe
   no-op, not a crash.
 
-## 8. `QueueScreenTest` row-click query was ambiguous (CI runs #16–#17, attempt 2 pending)
+## 8. `QueueScreenTest` row-click query was ambiguous (CI runs #16–#18, attempt 3/3)
 
 After the fix in finding 4 landed, CI run #16 turned up a genuinely different failure —
 13 of the 14 previously-broken tests now passed, isolating this to one:
@@ -202,21 +202,47 @@ same merged-descendants machinery that the nested `IconButton`s were interfering
 a test tag can only ever resolve to the exact node it was placed on. This sidesteps the
 merge-tree question entirely rather than trying to out-guess it a third time.
 
-**Scope of the fix, stated plainly:** this changes the *test's query and adds a
-testing-only hook*, not `QueueScreen.kt`'s actual click behavior. `Modifier.testTag`
-has no effect on layout, rendering, or accessibility — it is purely a lookup key for
-tests. Real touch input on a device hit-tests actual screen coordinates, not the
-semantics tree, so the row has always been genuinely clickable to a real finger; this
-whole finding is about a Compose *testing*-framework resolution quirk with nested
-clickable descendants, not a defect in what ships. `LibraryScreen`'s equivalent test
-was left as-is since it currently passes (no nested clickables in that row to trigger
-the same issue) — flagged here as something to watch if that screen ever grows one.
+`Modifier.testTag` has no effect on layout, rendering, or accessibility — it's purely a
+lookup key for tests. **This also did not fix it.** CI run #18 hit the identical
+symptom again: `performClick()` ran without throwing, `onItemClick` still never
+invoked — at the exact same line, same message. This ruled out "which semantics
+property the query matches on" as the variable entirely: `testTag` is documented as
+excluded from ancestor merging, and it *still* didn't resolve to the row's own click
+action. Whatever's happening is about how `performClick()` itself resolves against a
+merged node that has nested clickable descendants, not about which property named that
+node.
 
-**Confidence:** medium-high. The mechanism for *why* two different semantics-based
-queries both failed the same way isn't fully understood — logged honestly rather than
-asserting a specific cause I can't verify without a working local build (see
-ENVIRONMENT.md). What's high-confidence is that `testTag` is the documented,
-un-mergeable escape hatch for exactly this class of ambiguity, and this was attempt 2
-of 3 under the retry rule. If CI still shows this specific failure after this commit,
-per the retry rule this item is retired to BLOCKERS.md rather than attempted a third
-time blind.
+**Attempt 3 (final, per the retry rule):** researched this properly instead of guessing
+a third semantics property — via web search and Android's own official docs
+(`developer.android.com/develop/ui/compose/accessibility/merging-clearing`). Confirmed:
+`clickable` does set `mergeDescendants = true` on its own node, and a nested clickable
+descendant (each `IconButton`) correctly stays out of that merge, as expected. The docs
+don't explicitly describe this exact `performClick()`-silently-no-ops symptom, but they
+do give a specific, named recommendation for testing a clickable container that has
+nested independently-clickable children: pass `useUnmergedTree = true` to the matcher,
+so it targets the exact node directly in the unmerged tree rather than however that
+node gets exposed/resolved through the merged-tree view matchers use by default. Changed
+the query to `onNodeWithTag("queue_item_2", useUnmergedTree = true)` — same `testTag`
+from attempt 2, now paired with the parameter documentation names for exactly this
+scenario, rather than a fourth guess at a different targeting mechanism.
+
+**Scope of the fix, stated plainly:** this only changes how the *test* queries the
+tree — `useUnmergedTree` is a matcher-side parameter with no effect on
+`QueueScreen.kt`'s production behavior, layout, or accessibility. Real touch input on a
+device hit-tests actual screen coordinates, not the semantics tree, so the row has
+always been genuinely clickable to a real finger; all three attempts have been about a
+Compose *testing*-framework resolution quirk with nested clickable descendants, never a
+defect in what ships. `LibraryScreen`'s equivalent test was left as-is since it
+currently passes (no nested clickables in that row to trigger the same issue) —
+flagged here as something to watch if that screen ever grows one.
+
+**Confidence:** medium. This is grounded in Android's own documentation for the
+specific "clickable container with nested clickable children" scenario rather than
+another blind guess, and it addresses the one variable (merged- vs. unmerged-tree
+resolution) that attempts 1 and 2 never actually changed. Still, the docs stop short of
+describing this precise silent-no-op symptom, and there is no way to verify locally
+(see ENVIRONMENT.md) — so this is reported as the best-supported fix available, not a
+certainty. **This is attempt 3 of 3 under the retry rule.** If CI still shows this
+exact failure after this commit, per the explicit failure policy this item is retired
+to BLOCKERS.md — root cause, exact error, everything tried, and the best remaining
+hypothesis — rather than a fourth attempt.
