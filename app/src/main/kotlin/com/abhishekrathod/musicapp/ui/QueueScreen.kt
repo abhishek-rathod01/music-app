@@ -21,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import com.abhishekrathod.musicapp.media.PlaybackUiState
@@ -77,9 +78,19 @@ fun QueueScreen(
                     } else {
                         ListItemDefaults.colors()
                     },
+                // testTag, not just contentDescription: CI (see FINDINGS.md) found
+                // that a text- and then a contentDescription-based test query both
+                // resolved performClick() to something other than this row's own
+                // onClick action, in a row that also has three nested clickable
+                // IconButtons -- testTag is the one semantics property Compose
+                // testing documents as excluded from ancestor merging, so
+                // onNodeWithTag targets this exact node with no merge-tree
+                // ambiguity possible. Purely a testing hook; no effect on
+                // production behavior or accessibility.
                 modifier =
                     Modifier
                         .fillMaxWidth()
+                        .testTag("queue_item_$index")
                         .clickable { onItemClick(index) }
                         .semantics { contentDescription = "Play ${track.title} by ${track.artist}" },
             )

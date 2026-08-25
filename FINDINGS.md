@@ -159,7 +159,7 @@ three cases the brief calls out by name:
 - Connecting and calling `prepare()`/`play()` against an empty queue — must be a safe
   no-op, not a crash.
 
-## 8. `QueueScreenTest` row-click query was ambiguous (CI run #16 → fixed)
+## 8. `QueueScreenTest` row-click query was ambiguous (CI runs #16–#17, attempt 2 pending)
 
 After the fix in finding 4 landed, CI run #16 turned up a genuinely different failure —
 13 of the 14 previously-broken tests now passed, isolating this to one:
@@ -182,25 +182,41 @@ C"` / `"Artist C"`) sits in a merged tree alongside three sibling clickable regi
 Querying by text alone was ambiguous enough in that shape that `performClick()`
 resolved to something other than the row's own click action.
 
-**Fix:** query by the row's `contentDescription` (`"Play Song C by Artist C"`) instead
-of by its text. That description is set directly on the same clickable node as the
-`onClick` action in `QueueScreen.kt` — not merged in from a descendant — so it names
-that exact node unambiguously. This also matches the pattern this test file's own
-passing tests already use for the icon buttons (`onNodeWithContentDescription("Move
-Song B up")`, etc.).
+**Attempt 1:** query by the row's `contentDescription` (`"Play Song C by Artist C"`)
+instead of by its text — that description is set directly on the same clickable node as
+the `onClick` action in `QueueScreen.kt`, not merged in from a descendant, so it should
+have named that exact node unambiguously. It matched the pattern this test file's own
+passing icon-button tests already used (`onNodeWithContentDescription("Move Song B
+up")`, etc.). **This did not fix it.** CI run #17 hit the identical symptom —
+`performClick()` ran without throwing, `onItemClick` still never invoked — proving the
+problem was never about *which* semantics property the query matched on; something
+about `performClick()` resolving against a merged node that also has nested clickable
+descendants was the actual issue, and both text- and contentDescription-based queries
+were vulnerable to it equally.
 
-**Scope of the fix, stated plainly:** this changes the *test's query*, not
-`QueueScreen.kt`'s production behavior. Real touch input on a device hit-tests actual
-screen coordinates, not the semantics tree — the row has always been genuinely
-clickable to a real finger; the ambiguity was specific to how the Compose testing
-framework resolves an underspecified text-based semantics query against a row with
-nested clickable children, not a defect in what ships. `LibraryScreen`'s equivalent
-test was left as-is since it currently passes and its row has no nested clickables
-that could trigger the same ambiguity — flagged here as something to watch if that
-screen ever grows one.
+**Attempt 2 (fix):** added `Modifier.testTag("queue_item_$index")` directly to the row
+in `QueueScreen.kt`, and query by `onNodeWithTag("queue_item_2")` instead. `testTag` is
+the one semantics property Compose's testing framework documents as excluded from
+ancestor merging entirely — unlike text or content description, which live inside the
+same merged-descendants machinery that the nested `IconButton`s were interfering with,
+a test tag can only ever resolve to the exact node it was placed on. This sidesteps the
+merge-tree question entirely rather than trying to out-guess it a third time.
 
-**Confidence:** high on the mechanism (nested clickable regions are a documented
-Compose semantics-merging edge case) and high on the fix being correct by inspection
-(the content description targets the exact node bearing the `onClick` action). This is
-attempt 1 for this specific failure, and it resolved it — see the CI run after this
-commit.
+**Scope of the fix, stated plainly:** this changes the *test's query and adds a
+testing-only hook*, not `QueueScreen.kt`'s actual click behavior. `Modifier.testTag`
+has no effect on layout, rendering, or accessibility — it is purely a lookup key for
+tests. Real touch input on a device hit-tests actual screen coordinates, not the
+semantics tree, so the row has always been genuinely clickable to a real finger; this
+whole finding is about a Compose *testing*-framework resolution quirk with nested
+clickable descendants, not a defect in what ships. `LibraryScreen`'s equivalent test
+was left as-is since it currently passes (no nested clickables in that row to trigger
+the same issue) — flagged here as something to watch if that screen ever grows one.
+
+**Confidence:** medium-high. The mechanism for *why* two different semantics-based
+queries both failed the same way isn't fully understood — logged honestly rather than
+asserting a specific cause I can't verify without a working local build (see
+ENVIRONMENT.md). What's high-confidence is that `testTag` is the documented,
+un-mergeable escape hatch for exactly this class of ambiguity, and this was attempt 2
+of 3 under the retry rule. If CI still shows this specific failure after this commit,
+per the retry rule this item is retired to BLOCKERS.md rather than attempted a third
+time blind.

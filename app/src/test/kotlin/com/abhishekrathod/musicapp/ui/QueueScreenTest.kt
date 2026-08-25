@@ -2,6 +2,7 @@ package com.abhishekrathod.musicapp.ui
 
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -89,17 +90,14 @@ class QueueScreenTest {
             )
         }
 
-        // Not onNodeWithText("Song C") -- CI run #16 found that ambiguous here (see
-        // FINDINGS.md): the row's own clickable node merges its headline/supporting
-        // Text into itself for accessibility, EXCEPT this row also contains three
-        // independently-clickable IconButtons (move up/down, remove), each of which
-        // is its own merge boundary. onNodeWithText matched something in that tree,
-        // but performClick() on it never reached the row's own onClick action, so
-        // onItemClick was never invoked. The row's contentDescription is set
-        // directly on the same clickable node as the onClick action itself (see
-        // QueueScreen.kt), so it names that exact node unambiguously -- the same
-        // pattern already used successfully by this file's move/remove tests above.
-        composeTestRule.onNodeWithContentDescription("Play Song C by Artist C").performClick()
+        // Neither onNodeWithText("Song C") nor onNodeWithContentDescription("Play
+        // Song C by Artist C") reliably reached this row's own onClick action in CI
+        // (see FINDINGS.md) -- this row also contains three independently-clickable
+        // IconButtons (move up/down, remove), and performClick() on either query
+        // resolved to something in that merged tree other than the row's own click
+        // action. testTag is excluded from Compose's semantics-merging entirely, so
+        // onNodeWithTag names this exact node with no merge-tree ambiguity possible.
+        composeTestRule.onNodeWithTag("queue_item_2").performClick()
 
         assert(clickedIndex == 2) { "expected index 2, got $clickedIndex" }
     }
