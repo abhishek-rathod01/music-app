@@ -9,16 +9,26 @@ until the user has confirmed the current one works on their phone.**
 
 ## Stage 1 — Project skeleton, Gradle config, and a release pipeline
 
-### Status (2026-08-23)
+### Status (2026-08-25)
 
-**In progress — PR opened, awaiting CI and your on-device check.** All Stage 1 files are
-written: Gradle wrapper (pinned to Gradle 9.7.1), root + module build files, the version
-catalog, the one-screen app, and `.github/workflows/release.yml`. Versions were confirmed
-by web search, not memory — see the PR description for the exact numbers and confidence
-per dependency. This has never been compiled anywhere (see
-[`ENVIRONMENT.md`](ENVIRONMENT.md)): the first CI run on the PR is the first real signal.
-Do not start Stage 2 until the release APK installs and opens on your phone — see "How you
-verify this stage" below.
+**Code complete, CI in progress on this PR (last fix just pushed) — awaiting a green run
+and then your on-device check.** All Stage 1 files are
+written and CI's `pull_request` job (debug build + unit tests) passes on this PR's
+branch. Versions were confirmed by web search, not memory — see the PR description for
+the exact numbers and confidence per dependency. **The release (signed APK) path stays
+unverified until this PR merges to `main`** — that job only runs on push to `main`, per
+this stage's own design (see "The workflow" below). Do not start Stage 4 until the
+release APK installs and opens on your phone, playback works end to end, and background
+playback survives screen-off — see "How you verify this stage" below and the PR
+description's on-device checklist.
+
+**Note on stage numbering:** this PR actually covers Stage 1 (Gradle skeleton, this
+section) *and* the substance of Stage 2 (Media3 playback service) and Stage 3 (Compose
+UI) below, built together in one overnight session under an explicit "Phases A–D" brief
+rather than strictly one stage at a time. Each phase is still its own reviewable unit —
+see the commit history — and CLAUDE.md's "confirm on your phone before the next stage"
+rule still applies at the Stage 4 boundary: nothing about YouTube sync starts until you've
+confirmed Stages 1–3's combined result works on your device.
 
 ### Goal
 
@@ -152,6 +162,19 @@ check if the release job fails on something SDK-related.
 
 ## Stage 2 — Media3 playback service with a local file
 
+### Status (2026-08-25)
+
+**Done, this PR — CI in progress (last fix just pushed), then awaiting your on-device
+check.** `PlaybackService` (the name
+used in code instead of `MusicService`) lives in `:core:media`, wired to a single
+`ExoPlayer`/`MediaSession` pair playing a bundled local WAV. Robolectric tests cover
+service lifecycle, manifest correctness, controller connection, and (added in the Phase D
+adversarial pass) rapid connect/disconnect churn, a controller disconnecting mid-playback,
+and playback against an empty queue. See `ARCHITECTURE.md`'s "Testing boundaries" section
+for what these tests do and don't prove — doze survival past 40+ minutes, OEM battery
+killers, audio focus contention, and whether sound actually comes out of a speaker are
+on-device-only checks, not something this CI run can certify.
+
 Build `MusicService : MediaSessionService` in `:core:media`, wired to a single `ExoPlayer`
 instance playing one audio file bundled in `app/src/main/res/raw/` — no network, no
 `StreamResolver` yet, just proof that the session/service pattern from
@@ -165,6 +188,20 @@ one file, one track, no queue — until background playback is confirmed solid b
 the device.
 
 ## Stage 3 — Compose UI: library, player, queue
+
+### Status (2026-08-25)
+
+**Done, this PR — CI in progress (last fix just pushed), then awaiting your on-device
+check.** Library, player, and queue
+screens, all thin functions of `PlaybackUiState` + callbacks talking to playback only
+through the `PlaybackController` interface (never `MediaController`/`MediaSession`
+directly, per `ARCHITECTURE.md` constraint 2 — verified by grep during the Phase D
+architecture audit, see `FINDINGS.md`). Seeded from `FakeLibrary` (six hardcoded tracks)
+rather than Room — deliberately deferred to Stage 4, see the Phase C commit message for
+why adding Room for six rows tonight would have been unplanned scope. Queue reorder uses
+up/down buttons rather than drag-and-drop, deliberately, since there's no way to test a
+drag gesture in this sandbox (see `ENVIRONMENT.md` — no emulator, ever). Robolectric
+Compose tests cover every screen's rendering and callback wiring.
 
 Build out the real UI screens — library browse/search, now-playing, and queue — against
 fake/seeded local data in Room (no YouTube sync yet), delivering M3 (queue, shuffle,
