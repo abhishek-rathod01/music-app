@@ -11,16 +11,17 @@ until the user has confirmed the current one works on their phone.**
 
 ### Status (2026-08-25)
 
-**Code complete, CI in progress on this PR (last fix just pushed) — awaiting a green run
-and then your on-device check.** All Stage 1 files are
-written and CI's `pull_request` job (debug build + unit tests) passes on this PR's
-branch. Versions were confirmed by web search, not memory — see the PR description for
-the exact numbers and confidence per dependency. **The release (signed APK) path stays
-unverified until this PR merges to `main`** — that job only runs on push to `main`, per
-this stage's own design (see "The workflow" below). Do not start Stage 4 until the
-release APK installs and opens on your phone, playback works end to end, and background
-playback survives screen-off — see "How you verify this stage" below and the PR
-description's on-device checklist.
+**Code complete. CI's debug build (`assembleDebug`) passes cleanly; `testDebugUnitTest`
+has one known, documented failure out of ~40 tests across the whole project — see
+[`BLOCKERS.md`](BLOCKERS.md) — everything else, including all of `:core:model`,
+`:core:data`, `:stream`, and `:core:media`'s tests plus 13 of `:app`'s 14 Compose tests,
+passes.** All Stage 1 files are written. Versions were confirmed by web search, not
+memory — see the PR description for the exact numbers and confidence per dependency.
+**The release (signed APK) path stays unverified until this PR merges to `main`** —
+that job only runs on push to `main`, per this stage's own design (see "The workflow"
+below). Do not start Stage 4 until the release APK installs and opens on your phone,
+playback works end to end, and background playback survives screen-off — see "How you
+verify this stage" below and the PR description's on-device checklist.
 
 **Note on stage numbering:** this PR actually covers Stage 1 (Gradle skeleton, this
 section) *and* the substance of Stage 2 (Media3 playback service) and Stage 3 (Compose
@@ -164,8 +165,8 @@ check if the release job fails on something SDK-related.
 
 ### Status (2026-08-25)
 
-**Done, this PR — CI in progress (last fix just pushed), then awaiting your on-device
-check.** `PlaybackService` (the name
+**Done, this PR — all `:core:media` tests pass in CI; awaiting your on-device check.**
+`PlaybackService` (the name
 used in code instead of `MusicService`) lives in `:core:media`, wired to a single
 `ExoPlayer`/`MediaSession` pair playing a bundled local WAV. Robolectric tests cover
 service lifecycle, manifest correctness, controller connection, and (added in the Phase D
@@ -191,8 +192,9 @@ the device.
 
 ### Status (2026-08-25)
 
-**Done, this PR — CI in progress (last fix just pushed), then awaiting your on-device
-check.** Library, player, and queue
+**Done, this PR — 13 of 14 `:app` Compose tests pass in CI; one known failure in
+`QueueScreenTest` is documented in [`BLOCKERS.md`](BLOCKERS.md) rather than hidden;
+awaiting your on-device check.** Library, player, and queue
 screens, all thin functions of `PlaybackUiState` + callbacks talking to playback only
 through the `PlaybackController` interface (never `MediaController`/`MediaSession`
 directly, per `ARCHITECTURE.md` constraint 2 — verified by grep during the Phase D

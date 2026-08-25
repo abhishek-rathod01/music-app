@@ -159,7 +159,7 @@ three cases the brief calls out by name:
 - Connecting and calling `prepare()`/`play()` against an empty queue — must be a safe
   no-op, not a crash.
 
-## 8. `QueueScreenTest` row-click query was ambiguous (CI runs #16–#18, attempt 3/3)
+## 8. `QueueScreenTest` row-click failure — unresolved after 3 attempts, retired to BLOCKERS.md
 
 After the fix in finding 4 landed, CI run #16 turned up a genuinely different failure —
 13 of the 14 previously-broken tests now passed, isolating this to one:
@@ -236,13 +236,21 @@ defect in what ships. `LibraryScreen`'s equivalent test was left as-is since it
 currently passes (no nested clickables in that row to trigger the same issue) —
 flagged here as something to watch if that screen ever grows one.
 
-**Confidence:** medium. This is grounded in Android's own documentation for the
-specific "clickable container with nested clickable children" scenario rather than
-another blind guess, and it addresses the one variable (merged- vs. unmerged-tree
-resolution) that attempts 1 and 2 never actually changed. Still, the docs stop short of
-describing this precise silent-no-op symptom, and there is no way to verify locally
-(see ENVIRONMENT.md) — so this is reported as the best-supported fix available, not a
-certainty. **This is attempt 3 of 3 under the retry rule.** If CI still shows this
-exact failure after this commit, per the explicit failure policy this item is retired
-to BLOCKERS.md — root cause, exact error, everything tried, and the best remaining
-hypothesis — rather than a fourth attempt.
+**This also did not fix it.** CI run #19 hit the identical symptom a fourth time,
+verbatim: `performClick()` completes without throwing, `onItemClick` is never invoked,
+same assertion, same message. Four different, individually well-reasoned targeting
+mechanisms (text, content description, tag against the merged tree, tag against the
+unmerged tree) all produced the exact same outcome — strong evidence the actual cause
+isn't about *how the node is identified* at all, but something else about how
+`performClick()` resolves against this specific row shape (a `ListItem` with a
+`trailingContent` full of independently-clickable `IconButton`s, inside a `LazyColumn`)
+that none of the four attempts isolated.
+
+**Retired per the retry rule — this was attempt 3 of 3.** Per the explicit failure
+policy, three attempts is the cap so one hard problem doesn't consume a session at the
+expense of everything else. The test was **not** disabled, `@Ignore`d, deleted, or
+weakened to force green — it remains in the suite asserting real intended behavior, and
+CI shows it red honestly. Full details — the exact error, all four attempts in one
+place, and the best remaining (unverified) hypotheses for a future session — are in
+[`BLOCKERS.md`](BLOCKERS.md), per CLAUDE.md's instruction that a finding not understood
+after the retry budget goes there rather than being fixed blind.
