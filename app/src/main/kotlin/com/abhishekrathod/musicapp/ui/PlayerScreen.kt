@@ -65,7 +65,11 @@ fun PlayerScreen(
             shape = RoundedCornerShape(16.dp),
             color = MaterialTheme.colorScheme.surfaceVariant,
         ) {
-            Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
                 Icon(
                     imageVector = Icons.Filled.MusicNote,
                     contentDescription = null,
@@ -99,17 +103,23 @@ fun PlayerScreen(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            val shuffleTint =
+                if (state.shuffled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
             IconButton(onClick = onToggleShuffle) {
                 Icon(
                     Icons.Filled.Shuffle,
                     contentDescription = if (state.shuffled) "Shuffle on" else "Shuffle off",
-                    tint = if (state.shuffled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = shuffleTint,
                 )
             }
             IconButton(onClick = onPrevious) {
                 Icon(Icons.Filled.SkipPrevious, contentDescription = "Previous")
             }
-            IconButton(onClick = onPlayPause, modifier = Modifier.semantics { contentDescription = if (state.isPlaying) "Pause" else "Play" }) {
+            val playPauseDescription = if (state.isPlaying) "Pause" else "Play"
+            IconButton(
+                onClick = onPlayPause,
+                modifier = Modifier.semantics { contentDescription = playPauseDescription },
+            ) {
                 Icon(
                     imageVector = if (state.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                     contentDescription = null,
@@ -120,12 +130,14 @@ fun PlayerScreen(
                 Icon(Icons.Filled.SkipNext, contentDescription = "Next")
             }
             val (repeatIcon, repeatDescription) = repeatIconFor(state.repeatMode)
+            val repeatTint =
+                if (state.repeatMode == RepeatMode.OFF) {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                } else {
+                    MaterialTheme.colorScheme.primary
+                }
             IconButton(onClick = { onCycleRepeat(nextRepeatMode(state.repeatMode)) }) {
-                Icon(
-                    repeatIcon,
-                    contentDescription = repeatDescription,
-                    tint = if (state.repeatMode == RepeatMode.OFF) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
-                )
+                Icon(repeatIcon, contentDescription = repeatDescription, tint = repeatTint)
             }
         }
     }

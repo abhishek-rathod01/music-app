@@ -13,7 +13,9 @@ class CacheEvictorTest {
     fun `under the cap evicts nothing`() {
         val entries = listOf(entry("a", 100, 1), entry("b", 100, 2))
 
-        assertEquals(emptyList<CacheEntry>(), CacheEvictor.evictionsFor(entries, capBytes = 500, currentlyPlaying = null))
+        val result = CacheEvictor.evictionsFor(entries, capBytes = 500, currentlyPlaying = null)
+
+        assertEquals(emptyList<CacheEntry>(), result)
     }
 
     @Test

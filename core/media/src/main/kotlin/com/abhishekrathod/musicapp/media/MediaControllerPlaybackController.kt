@@ -168,7 +168,10 @@ class MediaControllerPlaybackController(
 
     private fun refreshState() {
         val mediaController = controller ?: return
-        val queue = (0 until mediaController.mediaItemCount).mapNotNull { trackById[mediaController.getMediaItemAt(it).mediaId] }
+        val queue =
+            (0 until mediaController.mediaItemCount).mapNotNull {
+                trackById[mediaController.getMediaItemAt(it).mediaId]
+            }
         val currentIndex = mediaController.currentMediaItemIndex.takeIf { mediaController.mediaItemCount > 0 }
         _state.value =
             PlaybackUiState(
