@@ -98,6 +98,15 @@ dependencies {
     implementation(project(":core:media"))
     implementation(libs.media3.session)
 
+    // Phase C CI (run #10) failed compiling :app: FakeLibrary, PlaybackViewModel,
+    // and the three screens reference Track/TrackId/RepeatMode/FakeStreamResolver/
+    // StreamUri directly, but :core:media keeps its own deps on these modules
+    // `implementation`-scoped (private, deliberately -- see its build.gradle.kts),
+    // so nothing transitively reached :app. Each needs its own direct dependency.
+    implementation(project(":core:model"))
+    implementation(project(":core:data"))
+    implementation(project(":stream"))
+
     // Phase C: screens observe PlaybackViewModel via collectAsStateWithLifecycle.
     implementation(libs.lifecycle.runtime.ktx)
     implementation(libs.lifecycle.viewmodel.compose)
