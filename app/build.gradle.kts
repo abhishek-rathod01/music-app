@@ -69,11 +69,21 @@ android {
         compose = true
         buildConfig = true
     }
+
+    testOptions {
+        unitTests {
+            // Phase C: Robolectric-backed Compose screen tests need this to
+            // resolve string/theme resources inside a plain JVM test — same
+            // reasoning as :core:media's identical setting.
+            isIncludeAndroidResources = true
+        }
+    }
 }
 
 dependencies {
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.material3)
+    implementation(libs.compose.material.icons.extended)
     implementation(libs.compose.ui.tooling.preview)
     implementation(libs.activity.compose)
     debugImplementation(libs.compose.ui.tooling)
@@ -88,5 +98,16 @@ dependencies {
     implementation(project(":core:media"))
     implementation(libs.media3.session)
 
+    // Phase C: screens observe PlaybackViewModel via collectAsStateWithLifecycle.
+    implementation(libs.lifecycle.runtime.ktx)
+    implementation(libs.lifecycle.viewmodel.compose)
+    implementation(libs.lifecycle.runtime.compose)
+
     testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.androidx.test.ext.junit)
+    testImplementation(platform(libs.compose.bom))
+    testImplementation(libs.compose.ui.test.junit4)
+    testImplementation(libs.compose.ui.test.manifest)
 }
