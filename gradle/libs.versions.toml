@@ -6,6 +6,14 @@ kotlin = "2.4.0"
 composeBom = "2026.08.00"
 activityCompose = "1.13.0"
 junit = "4.13.2"
+# Confirmed by web search on 2026-08-23 (overnight A-D build): GitHub
+# releases page shows 1.11.0 as latest, released 2026-05-08, built against
+# Kotlin 2.2.20. High confidence on "latest stable" (two independent
+# searches agreed); coroutines maintains a stable ABI across newer Kotlin
+# stdlib versions so building against Kotlin 2.4.0 here is expected to be
+# fine, but this specific combination has never been compiled anywhere —
+# see ENVIRONMENT.md. First real signal is CI.
+coroutines = "1.11.0"
 
 [libraries]
 compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
@@ -14,7 +22,10 @@ compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling
 compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
+kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
+kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
