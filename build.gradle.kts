@@ -23,3 +23,22 @@ plugins {
     // triggering a second, later, colliding resolution.
     alias(libs.plugins.kotlin.jvm) apply false
 }
+
+// Phase D diagnostic: CI's default test output only prints "FAILED" plus the
+// exception's class and the line it was thrown from (e.g. "RuntimeException
+// at RoboMonitoringInstrumentation.java:102") — never the message or the
+// causal chain underneath it. That's the only feedback channel available
+// (no local Android SDK, no way to reproduce here), so every subproject's
+// tests get full exception formatting: the full stack trace including
+// `Caused by:` chains, printed straight to the CI console instead of only
+// into an HTML report that has to be downloaded separately.
+subprojects {
+    tasks.withType<Test>().configureEach {
+        testLogging {
+            events("failed")
+            exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+            showCauses = true
+            showStackTraces = true
+        }
+    }
+}
