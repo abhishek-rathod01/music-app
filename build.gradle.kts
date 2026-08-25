@@ -4,6 +4,10 @@
 // itself" — each module opts in individually in its own build.gradle.kts.
 plugins {
     alias(libs.plugins.android.application) apply false
+    // com.android.library shares the same AGP artifact family/version as
+    // com.android.application (used by :core:media, Phase B onward) —
+    // resolved together here for the same reason kotlin.jvm is, below.
+    alias(libs.plugins.android.library) apply false
     alias(libs.plugins.compose.compiler) apply false
     // Added after CI run #5 failed resolving org.jetbrains.kotlin.jvm inside
     // :stream with "already on the classpath with an unknown version". Root

@@ -225,3 +225,52 @@ for going lower.
 all become visible state the UI can show — never a silent no-op. With no automated
 runtime testing and a single human reporting behaviour, a swallowed error is
 indistinguishable from a feature that was never built. See [`CLAUDE.md`](CLAUDE.md).
+
+---
+
+## Testing boundaries
+
+Added when `:core:media`'s Robolectric tests were written (Phase B of the overnight
+A–D build), because it's easy to look at a green `PlaybackServiceControllerTest` run and
+conclude more than it actually proves. Stated plainly, in both directions:
+
+### What Robolectric proves
+
+- **Manifest correctness.** `PlaybackServiceManifestTest` asks the real, merged
+  `PackageManager` whether the service is declared with `foregroundServiceType`,
+  the `MediaSessionService` intent-filter, and the right permissions requested — not a
+  hand-read of the XML. If the manifest is wrong, this fails.
+- **Service lifecycle.** `onCreate` builds a session, `onDestroy` releases it, and a
+  start command (Android re-invoking the service while it's already running — the
+  "backgrounded" case) doesn't tear it down. This is real code executing, not a mock.
+- **Session ↔ controller wiring.** A real `MediaController` really connects to a real
+  `MediaSessionService` — Robolectric shadows the framework classes involved
+  (`Context.bindService`, `Looper`, etc.) well enough that this is a genuine integration
+  test of the connection handshake, not a stub standing in for it.
+- **Compile-time and structural correctness generally.** If `:core:media` didn't compile
+  against the real Media3/AndroidX APIs, none of these tests would run at all.
+
+### What Robolectric cannot prove — and nothing in this repo's CI can
+
+- **Doze and extended background survival.** Robolectric's `Looper` and service shadows
+  don't model Android's real power management. Whether playback survives 40+ minutes of
+  actual doze, an actual screen-off period, an actual app-switch on a real device — none
+  of that is exercised here at all. That's exactly why `PLAN.md` Stage 2's verification
+  step is a manual, timed, on-device check, not "CI is green."
+- **OEM battery/task killers.** Many Android phone vendors ship their own, non-standard
+  background-process killing behavior on top of stock Android. No JVM-based test can
+  simulate a specific manufacturer's battery optimizer deciding to kill this process.
+  This can only be found by running the app on the actual device it needs to work on.
+- **Audio focus contention.** Nothing here tests what happens when another app (a call,
+  another player, a notification chime) requests audio focus while this app is playing.
+  That interaction is real Android audio-system behavior with no meaningful JVM shadow.
+- **Whether sound actually comes out.** This is the one worth saying without hedging:
+  **Robolectric does not decode or play audio.** `controller.prepare()` and
+  `mediaItemCount` succeeding in a test says the *wiring* accepted a media item — it says
+  nothing about whether a speaker or headphones would ever produce sound from it. The
+  first time this can be verified at all is a human pressing play on a phone.
+
+The dividing line, in one sentence: **Robolectric verifies the plumbing; it cannot verify
+the water actually runs.** Every item in the second list stays a "please check this on
+your phone" item in the stage's device-verification notes, not something a green CI run
+gets to claim credit for.

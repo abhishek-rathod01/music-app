@@ -78,5 +78,15 @@ dependencies {
     implementation(libs.activity.compose)
     debugImplementation(libs.compose.ui.tooling)
 
+    // Phase B: proves the playback pipeline end to end with a minimal
+    // screen. :core:media owns the Service; :app owns the MediaController
+    // that talks to it, per the brief ("MediaController in the UI layer").
+    // media3-session is declared directly here (not inherited from
+    // :core:media, which keeps it `implementation`-scoped, i.e. private to
+    // that module) because building a MediaController/SessionToken is
+    // legitimately UI-layer code, not a :core:media implementation detail.
+    implementation(project(":core:media"))
+    implementation(libs.media3.session)
+
     testImplementation(libs.junit)
 }
