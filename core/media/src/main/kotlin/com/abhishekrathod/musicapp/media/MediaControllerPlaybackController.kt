@@ -11,6 +11,7 @@ import androidx.media3.session.SessionToken
 import com.abhishekrathod.musicapp.data.queue.RepeatMode
 import com.abhishekrathod.musicapp.model.Track
 import com.abhishekrathod.musicapp.stream.StreamResolver
+import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -52,6 +53,16 @@ class MediaControllerPlaybackController(
     private var controller: MediaController? = null
     private var scope: CoroutineScope? = null
 
+    // Set for the whole time a buildAsync() call is in flight -- i.e.
+    // exactly the window where `controller` is still null but a connection
+    // is already underway. Without this, connect() called twice in quick
+    // succession (e.g. a rapid onStart/onStop/onStart) starts a *second*
+    // MediaController.Builder(...).buildAsync() before the first resolves,
+    // leaking the first CoroutineScope's polling loop forever. Found during
+    // the Phase D adversarial pass, not caught by any earlier test because
+    // nothing exercised rapid reconnects before then.
+    private var pendingConnection: ListenableFuture<MediaController>? = null
+
     // TrackId.value -> Track, so queue/currentTrack in PlaybackUiState carry
     // full metadata rather than just what a MediaItem happens to expose.
     private val trackById = mutableMapOf<String, Track>()
@@ -64,14 +75,16 @@ class MediaControllerPlaybackController(
         }
 
     override fun connect() {
-        if (controller != null) return
+        if (controller != null || pendingConnection != null) return
         val controllerScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
         scope = controllerScope
 
         val sessionToken = SessionToken(context, ComponentName(context, PlaybackService::class.java))
         val future = MediaController.Builder(context, sessionToken).buildAsync()
+        pendingConnection = future
         future.addListener(
             {
+                pendingConnection = null
                 val mediaController = future.get()
                 controller = mediaController
                 mediaController.addListener(playerListener)
@@ -91,6 +104,13 @@ class MediaControllerPlaybackController(
     override fun disconnect() {
         scope?.cancel()
         scope = null
+        // A connect() call still in flight must not be allowed to resolve
+        // after disconnect() runs and silently resurrect `controller` --
+        // MediaController.releaseFuture is Media3's documented way to
+        // cancel a pending buildAsync() (or release it if it already
+        // completed underneath us).
+        pendingConnection?.let { MediaController.releaseFuture(it) }
+        pendingConnection = null
         controller?.removeListener(playerListener)
         controller?.release()
         controller = null

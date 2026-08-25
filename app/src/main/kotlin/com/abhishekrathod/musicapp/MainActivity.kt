@@ -6,9 +6,9 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.PlayCircle
-import androidx.compose.material.icons.filled.QueueMusic
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -79,7 +79,7 @@ private fun MusicAppHost(viewModel: PlaybackViewModel = viewModel()) {
                 NavigationBarItem(
                     selected = destination == Destination.QUEUE,
                     onClick = { destination = Destination.QUEUE },
-                    icon = { Icon(Icons.Filled.QueueMusic, contentDescription = null) },
+                    icon = { Icon(Icons.AutoMirrored.Filled.QueueMusic, contentDescription = null) },
                     label = { Text(Destination.QUEUE.label) },
                 )
             }
