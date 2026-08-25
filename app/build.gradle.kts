@@ -118,5 +118,20 @@ dependencies {
     testImplementation(libs.androidx.test.ext.junit)
     testImplementation(platform(libs.compose.bom))
     testImplementation(libs.compose.ui.test.junit4)
-    testImplementation(libs.compose.ui.test.manifest)
+
+    // CI run #12/#13 failed every :app Compose test with "Unable to resolve
+    // activity for Intent {... cmp=.../androidx.activity.ComponentActivity}"
+    // (full stack trace only visible after adding testLogging's exceptionFormat =
+    // FULL -- see root build.gradle.kts). createComposeRule() launches that
+    // activity via ActivityScenario; ui-test-manifest is the artifact that
+    // registers it, by carrying its own small AndroidManifest.xml with a
+    // MAIN/LAUNCHER intent-filter for it. That manifest only reaches the
+    // "debug" manifest Robolectric actually resolves activities against if
+    // declared debugImplementation -- AGP's unit-test manifest merge pulls in
+    // the app's main/debug manifest chain, not testImplementation-scoped
+    // manifests (those are for compiling/running test code, not for describing
+    // the app under test). testImplementation here compiled fine and even ran,
+    // it just never got the activity registered, which is why the failure was
+    // silent about *why* until the full stack trace was visible.
+    debugImplementation(libs.compose.ui.test.manifest)
 }

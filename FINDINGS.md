@@ -80,14 +80,50 @@ reasonable manual repro of the original bug's trigger condition.
 All 13 of `:app`'s Phase C Compose screen tests (`LibraryScreenTest`, `PlayerScreenTest`,
 `QueueScreenTest`) failed CI run #12 with `java.lang.RuntimeException at
 RoboMonitoringInstrumentation.java:102` — a wrapper exception whose message and
-`Caused by:` chain never reach Gradle's default console output (only a downloadable HTML
+`Caused by:` chain never reached Gradle's default console output (only a downloadable HTML
 report does, and this sandbox's network policy blocks the Actions artifact storage host
 used to fetch it — an org-level 403, not something to route around).
 
-<!-- FILLED IN AFTER THE DIAGNOSTIC CI RUN — see the commit that added testLogging
-     (exceptionFormat = FULL) to the root build.gradle.kts for the mechanism, and the
-     paragraph below for the actual root cause once confirmed from the real console
-     stack trace. -->
+**Diagnostic step taken first, not a guess:** added `testLogging { exceptionFormat =
+FULL }` to every subproject's `Test` tasks in the root `build.gradle.kts` (a real,
+permanent improvement to CI's diagnostics, not a one-off hack) and re-ran CI to get the
+actual message and full stack trace in the console.
+
+**The real error, from run #13's console:**
+```
+java.lang.RuntimeException: Unable to resolve activity for Intent { act=android.intent.action.MAIN
+cat=[android.intent.category.LAUNCHER] cmp=com.abhishekrathod.musicapp/androidx.activity.ComponentActivity }
+    at org.robolectric.android.internal.RoboMonitoringInstrumentation.startActivitySyncInternal(...)
+    at androidx.test.core.app.ActivityScenario.launch(...)
+    ...
+    at androidx.compose.ui.test.junit4.AndroidComposeTestRule...
+```
+
+**Root cause:** `createComposeRule()` (used with no explicit activity class) hosts its
+composable content inside `androidx.activity.ComponentActivity`, launched via
+`ActivityScenario` — and it needs that activity actually registered in the manifest
+Robolectric resolves against. The `androidx.compose.ui:ui-test-manifest` artifact exists
+specifically to provide that registration, by carrying its own small
+`AndroidManifest.xml` declaring that activity with a `MAIN`/`LAUNCHER` intent-filter.
+It was declared `testImplementation(libs.compose.ui.test.manifest)` in
+`app/build.gradle.kts` — but AGP's unit-test manifest merge (`processDebugUnitTestManifest`)
+only folds in the app module's own main/debug manifest dependency chain
+(`implementation`/`debugImplementation`), not `testImplementation`-scoped manifests —
+those are compiled onto the test's JVM classpath but never merged into the manifest
+Robolectric treats as "the app under test." The dependency compiled and even ran; it
+just never registered the activity, which is why nothing failed until the moment
+`createComposeRule()` tried to launch it.
+
+**Fix:** moved the dependency to `debugImplementation(libs.compose.ui.test.manifest)` —
+the pattern Google's own Compose sample projects use for exactly this reason.
+`debugImplementation` also means this test-only manifest fragment (and the activity it
+declares) never ships in a release build, which matters for a project whose CI produces
+a real signed release APK on push to `main`.
+
+**Confidence:** high — this is a well-documented, common Compose-testing setup mistake
+with a single well-known fix, not a novel finding, and the diagnostic stack trace
+confirms the exact mechanism (an unresolvable `ComponentActivity` launch) rather than
+leaving it to inference.
 
 ## 5. Architecture non-negotiables — re-verified after Phase D changes
 
