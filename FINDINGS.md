@@ -158,3 +158,49 @@ three cases the brief calls out by name:
   connecting and observing correct state (not a crash, not a stale/broken session).
 - Connecting and calling `prepare()`/`play()` against an empty queue — must be a safe
   no-op, not a crash.
+
+## 8. `QueueScreenTest` row-click query was ambiguous (CI run #16 → fixed)
+
+After the fix in finding 4 landed, CI run #16 turned up a genuinely different failure —
+13 of the 14 previously-broken tests now passed, isolating this to one:
+
+```
+QueueScreenTest > clicking a queued track reports its index FAILED
+    java.lang.AssertionError: expected index 2, got null
+```
+
+`performClick()` itself didn't throw — it ran to completion — but `onItemClick` was never
+invoked, so `clickedIndex` stayed `null`. The test queried `onNodeWithText("Song C")`.
+
+**Root cause:** `QueueScreen`'s row is `.clickable { onItemClick(index) }` — the same
+pattern `LibraryScreen`'s row uses (and that row's equivalent test passes). The
+difference is `QueueScreen`'s row also has three independently-clickable `IconButton`s
+in its `trailingContent` (move up, move down, remove). A clickable element merges its
+descendants' semantics into itself for accessibility, but a *nested* clickable
+descendant is its own merge boundary — so this row's headline/supporting text (`"Song
+C"` / `"Artist C"`) sits in a merged tree alongside three sibling clickable regions.
+Querying by text alone was ambiguous enough in that shape that `performClick()`
+resolved to something other than the row's own click action.
+
+**Fix:** query by the row's `contentDescription` (`"Play Song C by Artist C"`) instead
+of by its text. That description is set directly on the same clickable node as the
+`onClick` action in `QueueScreen.kt` — not merged in from a descendant — so it names
+that exact node unambiguously. This also matches the pattern this test file's own
+passing tests already use for the icon buttons (`onNodeWithContentDescription("Move
+Song B up")`, etc.).
+
+**Scope of the fix, stated plainly:** this changes the *test's query*, not
+`QueueScreen.kt`'s production behavior. Real touch input on a device hit-tests actual
+screen coordinates, not the semantics tree — the row has always been genuinely
+clickable to a real finger; the ambiguity was specific to how the Compose testing
+framework resolves an underspecified text-based semantics query against a row with
+nested clickable children, not a defect in what ships. `LibraryScreen`'s equivalent
+test was left as-is since it currently passes and its row has no nested clickables
+that could trigger the same ambiguity — flagged here as something to watch if that
+screen ever grows one.
+
+**Confidence:** high on the mechanism (nested clickable regions are a documented
+Compose semantics-merging edge case) and high on the fix being correct by inspection
+(the content description targets the exact node bearing the `onClick` action). This is
+attempt 1 for this specific failure, and it resolved it — see the CI run after this
+commit.

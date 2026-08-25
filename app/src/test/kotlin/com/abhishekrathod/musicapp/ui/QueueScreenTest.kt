@@ -89,7 +89,17 @@ class QueueScreenTest {
             )
         }
 
-        composeTestRule.onNodeWithText("Song C").performClick()
+        // Not onNodeWithText("Song C") -- CI run #16 found that ambiguous here (see
+        // FINDINGS.md): the row's own clickable node merges its headline/supporting
+        // Text into itself for accessibility, EXCEPT this row also contains three
+        // independently-clickable IconButtons (move up/down, remove), each of which
+        // is its own merge boundary. onNodeWithText matched something in that tree,
+        // but performClick() on it never reached the row's own onClick action, so
+        // onItemClick was never invoked. The row's contentDescription is set
+        // directly on the same clickable node as the onClick action itself (see
+        // QueueScreen.kt), so it names that exact node unambiguously -- the same
+        // pattern already used successfully by this file's move/remove tests above.
+        composeTestRule.onNodeWithContentDescription("Play Song C by Artist C").performClick()
 
         assert(clickedIndex == 2) { "expected index 2, got $clickedIndex" }
     }
